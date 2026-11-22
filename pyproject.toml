@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "far-audio-salience"
+version = "0.1.0.dev0"
+description = "Research package for stateful, streaming local audio salience detection."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "pytest>=8.3",
+    "ruff>=0.11",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["far_audio_salience*"]
+namespaces = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"

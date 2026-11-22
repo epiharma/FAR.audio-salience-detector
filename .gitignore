@@ -1,0 +1,24 @@
+# Python bytecode and package metadata
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local environments
+.venv/
+.venv-*/
+venv/
+
+# Build artifacts and tool caches
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local secrets and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
