@@ -1,14 +1,18 @@
 # FAR Local Audio Salience Detector
 
-**Status: Research / Initial Setup**
+**Status: Research / Streaming Contract Skeleton**
 
 FAR is an independent Python package intended for research and development of a
 stateful, streaming local audio salience detector, with eventual integration into
 a larger AGI proof of concept.
 
-**The detector is not implemented yet.** This repository currently contains only
-package scaffolding, development tooling, and an import smoke test. There are no
-model capabilities, performance measurements, or experimental results to report.
+**The acoustic detector is not implemented yet.** The package implements typed
+streaming contracts, bounded per-source ingestion/finalization, health events,
+eligibility and alignment interfaces, administrative baseline/candidate lifecycle,
+and metadata snapshots. Finalized valid observations have explicit unavailable
+assessments: acoustic scores, confidence, and `is_salient` are `None` with
+`not_implemented`. No extractor, model learning, matching/readiness algorithm,
+score calibration/composition, or audio capture is supplied.
 
 ## Scope and design
 
@@ -18,14 +22,27 @@ stream-integrity diagnostics, and persistent learned state. Audio capture belong
 to the caller; the package will remain independent of AGI internals. Semantic
 sound classification and speech recognition are outside v1 scope.
 
-See the [architecture specification](docs/design/DESIGN-001-local-audio-salience)
-for approved decisions and open questions. The existing specification is stored
-without a file extension and is preserved unchanged.
+See [DESIGN-001](docs/design/DESIGN-001-local-audio-salience.md) and
+[DESIGN-002](docs/design/DESIGN-002-streaming-audio-api.md). Section 18 establishes
+precedence; Section 19 records implemented signatures and deferred capabilities.
 
-Input/output types, audio formats, algorithms, scoring/calibration, baseline
-policies, persistence details, and evaluation thresholds remain open. Automatic
-window sizing and score-weight learning are future enhancements. None of these
-decisions is resolved by this initial setup.
+Input uses normalized native float32 through planar/interleaved memoryviews.
+Each call may provide a subset of one independently clocked source's channels.
+Missing channels from other sources are never inferred from that omission. The
+caller owns the buffer until `process()` returns; retained samples are copied.
+Structural errors reject atomically. Invalid values exclude the affected channel
+block and produce health events while other channels continue.
+
+All calls must be serialized by the application. FAR provides no capture thread,
+clock synchronizer, resampler, broker, background timer, or global interpretation.
+Snapshot files use bounded, versioned JSON metadata with atomic replacement;
+they contain no learned acoustic parameters because no learning algorithm exists.
+Restore preserves candidate IDs and blocks but starts a new run with no active
+sources, buffered audio, or alignment claims. Reset operations never delete files.
+
+Automatic window sizing and score-weight learning remain future enhancements.
+Algorithms, scoring, calibration, and quantitative acceptance budgets remain open.
+There are no model performance results or P0 live-microphone validation results.
 
 ## Development installation
 
@@ -69,6 +86,10 @@ python -m build
 
 To apply formatting, run `python -m ruff format .`. Builds produce a wheel and
 source distribution in `dist/`.
+
+Runnable [synthetic contract examples](examples/README.md) show one microphone-
+shaped source and two independent microphone-shaped sources. Actual live capture
+and recorded-audio decoding require external adapters.
 
 ## License
 

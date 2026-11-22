@@ -31,3 +31,10 @@ jobs:
         run: python -m pytest
       - name: Verify installed package import
         run: python -c "import far_audio_salience; print(far_audio_salience.__file__)"
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Verify wheel in a clean environment
+        run: |
+          python -m venv /tmp/far-wheel-check
+          /tmp/far-wheel-check/bin/python -m pip install --no-index --no-deps dist/*.whl
+          /tmp/far-wheel-check/bin/python -I -c "from far_audio_salience import AudioSalienceDetector; print(AudioSalienceDetector.__module__)"
