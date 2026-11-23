@@ -1,4 +1,6 @@
 include .python-version
 recursive-include docs/design *.md
+recursive-include docs/adr *.md
+recursive-include benchmarks *.py *.md
 recursive-include examples *.py *.md
 recursive-include tests *.py

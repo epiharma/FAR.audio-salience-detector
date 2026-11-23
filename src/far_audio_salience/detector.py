@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import math
 import time
-from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from ._history import _Index, _planned, _Timing
 from .baselines import BaselineStore, ReadinessEvidence
 from .contracts import (
     AudioChunk,
@@ -69,19 +69,12 @@ def _stamp(value: ClockStamp | None) -> None:
         _integer(value.ns, "timestamp")
 
 
-@dataclass(frozen=True, slots=True)
-class _Sample:
-    value: float | None
-    measured: ClockStamp | None
-    received: ClockStamp | None
-
-
 @dataclass(slots=True)
 class _Lane:
     watermark: int = 0
     high_water: int = 0
-    pending: dict[int, _Sample] = field(default_factory=dict)
-    history: dict[int, _Sample] = field(default_factory=dict)
+    pending: _Index = field(default_factory=_Index)
+    history: _Index = field(default_factory=_Index)
     unavailable: bool = False
     recovery_after: int | None = None
 
@@ -519,31 +512,31 @@ class AudioSalienceDetector:
                     chunk.received_at,
                 ),
             )
-        # Stage lane copies; expected refusal cannot mutate accepted data/frontiers.
+        # Stage immutable descriptor plans; payload is copied only after preflight.
         lanes = dict(self._lanes)
+        borrowed: dict[ChannelKey, memoryview] = {}
         drafts: list[Draft] = []
         accepted, ignored, reasons = [], [], []
         start, stop = chunk.interval.start_frame, chunk.interval.stop_frame
-        n = stop - start
         width = len(chunk.audio.channel_ids)
+        timing = _Timing(start, chunk.measured_start, chunk.received_at)
         for position, channel in enumerate(chunk.audio.channel_ids):
             key = ChannelKey(spec.ref.source_id, channel)
-            lane = deepcopy(lanes[key])
+            lane = replace(lanes[key])
             lanes[key] = lane
             values = (
-                tuple(chunk.audio.samples[i * width + position] for i in range(n))
+                chunk.audio.samples[position::width]
                 if isinstance(chunk.audio, InterleavedAudio)
-                else tuple(chunk.audio.planes[position])
+                else chunk.audio.planes[position]
             )
+            borrowed[key] = values
             span = DataSpan(chunk.interval, (channel,))
             provenance = self._provenance(span, chunk.measured_start, chunk.received_at)
             valid = all(math.isfinite(v) and -1 <= v <= 1 for v in values)
             # Any provable conflict quarantines this channel's entire incoming block.
-            conflict = valid and any(
-                (old := lane.pending.get(frame, lane.history.get(frame))) is not None
-                and old.value is not None
-                and old.value != value
-                for frame, value in enumerate(values, start)
+            conflict = valid and (
+                lane.pending.conflicts(start, values)
+                or lane.history.conflicts(start, values)
             )
             if conflict:
                 ignored.append(span)
@@ -565,30 +558,18 @@ class AudioSalienceDetector:
                 ignored.append(
                     DataSpan(SourceInterval(spec.ref, start, late_stop), (channel,))
                 )
-                comparable = all(f in lane.history for f in range(start, late_stop))
+                comparable = lane.history.covers(start, late_stop)
                 reasons.append("late" if comparable else "late_unverifiable")
-            new_frames = []
-            for frame in range(max(start, lane.watermark), stop):
-                if frame in lane.pending:
-                    continue
-                stamp = (
-                    None
-                    if chunk.measured_start is None
-                    else ClockStamp(
-                        spec.clock_id,
-                        chunk.measured_start.ns
-                        + (frame - start) * 1_000_000_000 // spec.sample_rate_hz,
-                    )
-                )
-                lane.pending[frame] = _Sample(
-                    values[frame - start] if valid else None, stamp, chunk.received_at
-                )
-                new_frames.append(frame)
-            if new_frames:
-                new_spans = self._spans(spec.ref, channel, new_frames)
+            ranges = lane.pending.uncovered(max(start, lane.watermark), stop)
+            if ranges:
+                lane.pending = lane.pending.added(_planned(ranges, valid, timing))
+                new_spans = [
+                    DataSpan(SourceInterval(spec.ref, a, b), (channel,))
+                    for a, b in ranges
+                ]
                 accepted.extend(new_spans)
                 if not valid:
-                    first = lane.pending[new_frames[0]]
+                    measured = timing.at(ranges[0][0], spec.sample_rate_hz)
                     drafts.append(
                         (
                             "health",
@@ -597,8 +578,10 @@ class AudioSalienceDetector:
                                 "channels": (key,),
                                 "provenance": Provenance(
                                     tuple(new_spans),
-                                    () if first.measured is None else (first.measured,),
-                                    () if first.received is None else (first.received,),
+                                    () if measured is None else (measured,),
+                                    ()
+                                    if timing.received is None
+                                    else (timing.received,),
                                 ),
                             },
                         )
@@ -626,6 +609,10 @@ class AudioSalienceDetector:
                     chunk.received_at,
                 ),
             )
+        for key, values in borrowed.items():
+            lane = lanes[key]
+            lane.pending = lane.pending.materialized(values, start)
+            lane.history = lane.history.materialized(values, start).compacted()
         self._lanes = lanes
         if chunk.quality and (
             chunk.quality.overflow
@@ -679,19 +666,6 @@ class AudioSalienceDetector:
         )
 
     @staticmethod
-    def _spans(ref: SourceRef, channel: str, frames: list[int]) -> list[DataSpan]:
-        spans = []
-        a = b = frames[0]
-        for frame in frames[1:]:
-            if frame == b + 1:
-                b = frame
-            else:
-                spans.append(DataSpan(SourceInterval(ref, a, b + 1), (channel,)))
-                a = b = frame
-        spans.append(DataSpan(SourceInterval(ref, a, b + 1), (channel,)))
-        return spans
-
-    @staticmethod
     def _provenance(span: DataSpan, measured=None, received=None) -> Provenance:
         return Provenance(
             (span,),
@@ -708,29 +682,28 @@ class AudioSalienceDetector:
         drafts: list[Draft],
     ) -> None:
         key = ChannelKey(spec.ref.source_id, channel)
-        frames = sorted(f for f in lane.pending if f < frontier)
-        groups: list[list[int]] = []
-        for frame in frames:
+        finalized, pending = lane.pending.split(frontier)
+        groups = []
+        for span in finalized.spans:
             if (
                 not groups
-                or frame != groups[-1][-1] + 1
-                or (lane.pending[frame].value is None)
-                != (lane.pending[groups[-1][-1]].value is None)
+                or span.start != groups[-1][-1].stop
+                or span.valid != groups[-1][-1].valid
             ):
-                groups.append([frame])
+                groups.append([span])
             else:
-                groups[-1].append(frame)
+                groups[-1].append(span)
         cursor = lane.watermark
         for group in groups:
-            a, b = group[0], group[-1] + 1
+            first, last = group[0], group[-1]
+            a, b = first.start, last.stop
             if a > cursor:
                 self._gap(spec, channel, lane, cursor, a, drafts)
-            sample = lane.pending[a]
-            if sample.value is not None:
+            if first.valid:
                 provenance = self._provenance(
                     DataSpan(SourceInterval(spec.ref, a, b), (channel,)),
-                    sample.measured,
-                    sample.received,
+                    first.timing.at(a, spec.sample_rate_hz),
+                    first.timing.received,
                 )
                 if (
                     lane.unavailable
@@ -738,7 +711,8 @@ class AudioSalienceDetector:
                     and b > lane.recovery_after
                 ):
                     recovered_start = max(a, lane.recovery_after)
-                    recovered_sample = lane.pending[recovered_start]
+                    recovered_span = finalized.at(recovered_start)
+                    assert recovered_span is not None
                     drafts.append(
                         (
                             "health",
@@ -750,8 +724,10 @@ class AudioSalienceDetector:
                                         SourceInterval(spec.ref, recovered_start, b),
                                         (channel,),
                                     ),
-                                    recovered_sample.measured,
-                                    recovered_sample.received,
+                                    recovered_span.timing.at(
+                                        recovered_start, spec.sample_rate_hz
+                                    ),
+                                    recovered_span.timing.received,
                                 ),
                                 "reason_codes": ("baseline_revalidation_required",),
                             },
@@ -759,13 +735,13 @@ class AudioSalienceDetector:
                     )
                     lane.unavailable = False
                     lane.recovery_after = None
-                last = lane.pending[b - 1]
+                measured = last.timing.at(b - 1, spec.sample_rate_hz)
                 stamp = (
                     None
-                    if last.measured is None
+                    if measured is None
                     else ClockStamp(
                         spec.clock_id,
-                        last.measured.ns + 1_000_000_000 // spec.sample_rate_hz,
+                        measured.ns + 1_000_000_000 // spec.sample_rate_hz,
                     )
                 )
                 drafts.append(
@@ -781,14 +757,13 @@ class AudioSalienceDetector:
             cursor = b
         if frontier > cursor:
             self._gap(spec, channel, lane, cursor, frontier, drafts)
-        for frame in frames:
-            lane.history[frame] = lane.pending.pop(frame)
+        lane.pending = pending
         lane.watermark = frontier
         retain = (
             self.config.comparison_retention_ns * spec.sample_rate_hz
         ) // 1_000_000_000
         cutoff = frontier - retain
-        lane.history = {f: s for f, s in lane.history.items() if f >= cutoff}
+        lane.history = lane.history.added(finalized.spans).pruned(cutoff)
 
     def _gap(self, spec, channel, lane, start, stop, drafts) -> None:
         if not lane.unavailable:
@@ -828,8 +803,9 @@ class AudioSalienceDetector:
         drafts: list[Draft] = []
         for channel in mark.channel_ids:
             key = ChannelKey(spec.ref.source_id, channel)
-            lanes[key] = deepcopy(lanes[key])
+            lanes[key] = replace(lanes[key])
             self._finalize_lane(spec, channel, lanes[key], mark.before_frame, drafts)
+            lanes[key].history = lanes[key].history.compacted()
         self._lanes = lanes
         return self._batch(drafts, finalized=(mark,))
 
@@ -844,6 +820,7 @@ class AudioSalienceDetector:
             lane = self._lanes[ChannelKey(ref.source_id, channel)]
             frontier = max(lane.watermark, lane.high_water)
             self._finalize_lane(spec, channel, lane, frontier, drafts)
+            lane.history = lane.history.compacted()
             marks.append(SourceWatermark(ref, (channel,), frontier))
         self._active.remove(ref.source_id)
         return self._batch(drafts, finalized=tuple(marks))
