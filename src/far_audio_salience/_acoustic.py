@@ -111,6 +111,7 @@ class AcousticEngine:
         self.models = {}
         self.candidates = {}
         self._pending_lifecycle = []
+        self._pending_candidate_skips: list[tuple[ChannelKey, Provenance]] = []
         self.window_count = self.revision_count = 0
 
     def fork(self, keys):
@@ -131,6 +132,7 @@ class AcousticEngine:
             if value["channel"] in keys:
                 draft.candidates[cid] = deepcopy(value)
         draft._pending_lifecycle = []
+        draft._pending_candidate_skips = []
         draft.window_count = draft.revision_count = 0
         return draft
 
@@ -503,10 +505,28 @@ class AcousticEngine:
         # Competing common-mode gain hypothesis. Require established audible
         # presence; otherwise below-floor emergence retains the ordinary path.
         invariant = (
-            state.plan.level_invariant_bands(frame, cfg.absolute_power_floor)
+            state.plan.level_invariant_bands(
+                frame, cfg.absolute_power_floor, cfg.offset_ratio
+            )
             if background.expected
             else None
         )
+        peak_frame = without_peak = None
+        if analysis_eligible and invariant is not None and peak >= cfg.strong_peak:
+            offset = state.plan.isolated_peak_offset(
+                frame, cfg.strong_peak, cfg.impulse_ratio
+            )
+            if offset is not None:
+                # Verify that this sample supplies the independent band evidence
+                # under the same gain compensation as the observed frame.
+                counterfactual = frame.copy()
+                counterfactual[offset] = (
+                    float(frame[offset - 1]) + float(frame[offset + 1])
+                ) / 2
+                without_peak = state.plan.level_invariant_bands(
+                    counterfactual, cfg.absolute_power_floor, cfg.offset_ratio
+                )
+                peak_frame = start + offset
         band_rows = []
         anomalous = False
         for name, (value, reason) in powers.items():
@@ -539,6 +559,9 @@ class AcousticEngine:
                     if invariant is None or name == "broadband"
                     else min(value, invariant[name][0]),
                     impulse=impulse_high,
+                    isolated_peak=(peak_frame, without_peak[name][0])
+                    if without_peak is not None and name != "broadband"
+                    else None,
                 )
             if (
                 invariant is not None
@@ -700,7 +723,11 @@ class AcousticEngine:
             state.continuity,
             tuple(horizons),
         )
-        self._pending_lifecycle.extend(lifecycle)
+        provenance = self._provenance(spec, key.channel_id, start, end, timing)
+        if lifecycle is None:
+            self._pending_candidate_skips.append((key, provenance))
+        else:
+            self._pending_lifecycle.extend(lifecycle)
         return (
             "salience",
             dict(
@@ -718,7 +745,7 @@ class AcousticEngine:
                 else ("component_unavailable",),
                 changes=tuple(changes),
                 windows=(window,),
-                provenance=self._provenance(spec, key.channel_id, start, end, timing),
+                provenance=provenance,
             ),
         )
 
@@ -793,6 +820,7 @@ class AcousticEngine:
         onset_power=None,
         common_gain=None,
         impulse=False,
+        isolated_peak=None,
     ):
         activity.presence_ambiguous = False
         cfg = self.config
@@ -901,6 +929,14 @@ class AcousticEngine:
                 # confirmation. sqrt(2*power) is a sinusoidal-equivalent band
                 # amplitude, not a reconstructed peak or a source identity.
                 intensity = peak if name == "broadband" else math.sqrt(2 * evidence)
+                peak_support = (
+                    isolated_peak is not None
+                    and not activity.active
+                    and not activity.observed_active
+                    and isolated_peak[1] < threshold
+                )
+                if peak_support:
+                    intensity = cfg.strong_peak
                 strong = min(1.0, intensity / max(cfg.strong_peak, 1e-12))
                 confirmation = cfg.weak_confirmation_seconds + strong * (
                     cfg.strong_confirmation_seconds - cfg.weak_confirmation_seconds
@@ -910,10 +946,11 @@ class AcousticEngine:
                 # of contrast unless independent hop energy supports a pulse.
                 if activity.observed_active and share is not None and not impulse:
                     confirmation = max(confirmation, cfg.frame_seconds)
-                if (end - activity.rise) / state.rate >= confirmation:
+                detected_start = isolated_peak[0] if peak_support else activity.rise
+                if (end - detected_start) / state.rate >= confirmation:
                     activity.active, activity.start, activity.fall = (
                         True,
-                        activity.rise,
+                        detected_start,
                         None,
                     )
                     activity.relative = bool(
@@ -1056,6 +1093,15 @@ class AcousticEngine:
             and guard >= cfg.loudness_activity_floor
             and kind not in state.transitions
         ):
+            # A confirmed reversal ends the prior excursion even when the
+            # signal never settles long enough for the stable rearm path.
+            opposite = "loudness_drop" if delta > 0 else "loudness_spike"
+            previous = state.transitions.pop(opposite, None)
+            if previous is not None:
+                self._finish(state, previous, end, changes)
+                # A subsequent reversal must start its own broadband event,
+                # even inside the preceding event's grouping window.
+                state.group.pop(opposite, None)
             state.transitions[kind] = self._new(
                 state,
                 spec,
@@ -1101,9 +1147,9 @@ class AcousticEngine:
             cid, model = matches[0]
         else:
             if len(store.administration) >= limits.max_baselines:
-                raise AcousticLimit(
-                    "max_baselines", len(store.administration) + 1, limits.max_baselines
-                )
+                # New learning is unavailable. Existing models and this window
+                # can still be committed by the enclosing audio transaction.
+                return None
             cid = new_id()
             record = BaselineRecord(
                 new_id(),

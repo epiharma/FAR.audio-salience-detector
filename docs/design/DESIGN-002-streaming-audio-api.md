@@ -338,6 +338,23 @@ Replace ambiguous `reset()` with **`reset_learning()`** and **`factory_reset()`*
 
 ### 18.5 Resource refusal event semantics
 
+**APPROVED — Non-blocking acoustic candidate allocation ([ADR-002](../adr/ADR-002-non-blocking-baseline-candidate-capacity.md)).** If an
+otherwise eligible window cannot allocate a new candidate solely because
+`max_baselines` is full, admit otherwise valid audio and continue assessment
+and eligible updates to existing models. Skip that allocation without consuming
+a candidate ID or changing retention or promotion rules. A required learned
+reference that is unavailable still makes the dependent assessment unavailable.
+
+- Publish `SensorHealthEvent(event_type="capacity_exhausted")` with reason
+  `candidate_allocation_skipped` and resource `max_baselines`. The first committed
+  skip starts an episode, subsequent committed skips count toward the configured
+  aggregation cadence, and the episode ends when an authorized operation clears
+  the capacity condition or the detector closes.
+- Accepted coverage, acoustic state, learned updates and outputs commit
+  together. Other admission or processing failures retain transactional refusal,
+  including rollback of any candidate skips staged by the failed call. Explicit
+  administrative candidate registration can still be refused at capacity.
+
 - First hard-limit violation in an episode: emit an immediate **`SensorHealthEvent`** and a structured refusal.
 - Every subsequent rejected call returns a structured **`Refusal`** referring to its **`resource_episode_id`**, even when no new health event is emitted.
 - Emit periodic aggregate health updates with violation count, episode duration, affected resource and peak exceedance; materially worse violations trigger an immediate update.

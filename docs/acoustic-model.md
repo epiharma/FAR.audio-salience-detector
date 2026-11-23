@@ -82,6 +82,24 @@ prevent automatic promotion. Existing approve/reject/block/unblock/archive/react
 commands retain revision/idempotency semantics. Active established candidate models
 can serve as compatible per-feature references without resetting current activity.
 
+At `max_baselines`, an eligible window can still update a matching candidate.
+If the window needs a new candidate, FAR skips only that allocation and emits
+`capacity_exhausted` with reason `candidate_allocation_skipped`, including the
+affected channel and window provenance on first and aggregate reports. Counts
+are skipped committed analysis windows. Valid audio, salience and eligible
+updates commit together. A separate intake or processing refusal rolls back
+the staged skips along with the rest of the audio transaction. Existing
+references remain usable, and assessment requiring a missing reference is
+unavailable. Skipped allocations consume no candidate ID and are not queued.
+The administrative count includes retained IDs even after archiving or
+`reset_learning()`. Allocation can resume after capacity is released through
+the existing authorized factory reset. The learning-capacity episode is
+separate from explicit registration refusals and ends on factory reset or
+close. The shared candidate-eligibility timer can still qualify successive
+unmatched windows for durable IDs. Candidate creation policy remains a
+separate design problem.
+[ADR-002](adr/ADR-002-non-blocking-baseline-candidate-capacity.md)
+
 Acoustic deviation is u/(1+u), where u is the maximum available band power relative
 deviation from pre-update learned means, with absolute acoustic floor denominator;
 confirmed transition magnitude also contributes. Temporal deviation compares a

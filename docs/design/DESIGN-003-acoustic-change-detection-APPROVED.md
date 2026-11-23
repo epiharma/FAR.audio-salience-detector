@@ -88,6 +88,14 @@ Simultaneous distinct kinds are permitted if independently supported. Changes ar
 - Existing detector finalization can precede input admission/materialization: **do not blindly insert DSP into `_finalize_lane()`** or rely solely on comparison retention. Stage borrowed input plus owned pending evidence, preflight resources, compute private draft state, and commit atomically only after valid admission.
 - Bound DSP lookback, spectral buffers, impulse history, rhythm state, grouping/revision queues, candidate parameters and learned-state memory independently of ADR-001 comparison history. Preserve `max_buffer_bytes` meaning unless explicitly versioned.
 - Refuse resource-exhausting transactions structurally with appropriate health evidence or use a documented unavailable assessment; never silently discard state, corrupt baseline, or pretend a missing feature is silence.
+- **APPROVED ([ADR-002](../adr/ADR-002-non-blocking-baseline-candidate-capacity.md)).**
+  Exhausting slots for new baseline candidate IDs is a
+  learning limitation. Skip that allocation, report it via `SensorHealthEvent`,
+  and commit otherwise valid audio, salience and eligible existing-model
+  learning. Preserve all retained identities, parameters and controls. A
+  missing required reference leaves the dependent assessment unavailable.
+  Processing and admission limits still refuse atomically. Candidate creation
+  criteria and the rate of persistent ID creation are separate from this policy.
 - Invalid samples, conflicting overlaps, gaps and clock uncertainty preserve existing quarantine/eligibility rules. Do not cross independent source clocks for per-channel features; cross-channel aggregation is out of scope absent explicitly aligned policy.
 
 ## 11. Verification and acceptance

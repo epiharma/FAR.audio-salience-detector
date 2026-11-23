@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import time
 from queue import Empty, Full, Queue
 
@@ -66,26 +67,35 @@ def locate(signal, template, expected_frame):
         return None
     template = template.astype(np.float64)
     n = 1 << (len(segment) + len(template) - 2).bit_length()
-    corr = np.fft.irfft(np.fft.rfft(segment, n) * np.fft.rfft(template[::-1], n), n)
+    spectrum = np.fft.rfft(template, n)
+    corr = np.fft.irfft(np.fft.rfft(segment, n) * spectrum.conj(), n)
     squared = np.r_[0.0, np.cumsum(segment * segment)]
     energy = squared[len(template) :] - squared[: -len(template)]
-    coefficients = np.abs(corr[len(template) - 1 : len(segment)]) / np.sqrt(
-        np.maximum(energy * np.dot(template, template), 1e-30)
+    template_energy = np.dot(template, template)
+    coefficients = np.abs(corr[: len(energy)]) / np.sqrt(
+        np.maximum(energy * template_energy, 1e-30)
     )
     index = int(np.argmax(coefficients))
     peak = float(coefficients[index])
-    # Exclude the correlation lobe, but treat a second distinct arrival
-    # (including a repeated marker or strong echo) as ambiguous.
-    exclusion = len(template) // 4
+    # Mask only the offsets where this chirp correlates with itself at the
+    # marker threshold. A fixed quarter-marker mask hid nearby duplicates.
+    autocorrelation = np.fft.irfft(spectrum.real**2 + spectrum.imag**2, n)
+    exclusion = int(
+        np.flatnonzero(
+            np.abs(autocorrelation[: len(template) // 4])
+            >= MARKER_CORRELATION * template_energy
+        )[-1]
+    )
     alternate = max(
         float(np.max(coefficients[: max(0, index - exclusion)], initial=0)),
-        float(np.max(coefficients[index + exclusion :], initial=0)),
+        float(np.max(coefficients[index + exclusion + 1 :], initial=0)),
     )
     return dict(
         expected_frame=expected_frame,
         matched_frame=start + index,
         correlation=peak,
         alternate_correlation=alternate,
+        self_match_radius_frames=exclusion,
         unique=peak >= MARKER_CORRELATION and peak >= 1.5 * alternate,
     )
 
@@ -95,22 +105,42 @@ def align(audio, markers, anchors):
     if not anchors:
         return dict(valid=False, reason="no_duplex_timestamp_evidence", markers=[])
     frames, adc, dac = np.asarray(anchors, dtype=float).T
+    if (
+        frames[0] != 0
+        or len(audio) != len(frames) * BLOCK
+        or np.any(np.diff(frames) != BLOCK)
+    ):
+        return dict(valid=False, reason="invalid_delivered_frame_evidence", markers=[])
+    frame_steps = np.diff(frames)
     invalid_anchors = []
     for name, stamps in (("adc", adc), ("dac", dac)):
         if not np.all(np.isfinite(stamps)):
             invalid_anchors.append(dict(clock=name, error="nonfinite_timestamp"))
             continue
         steps = np.diff(stamps) * RATE
-        bad = np.flatnonzero((steps <= 0) | (np.abs(steps - np.diff(frames)) > BLOCK))
+        non_increasing = steps <= 0
+        spaced_incorrectly = np.abs(steps - frame_steps) > BLOCK
+        bad = np.flatnonzero(non_increasing | spaced_incorrectly)
         if len(bad):
             i = int(bad[0])
+            failed_checks = [
+                check
+                for check, failures in (
+                    ("strict_increase", non_increasing),
+                    ("block_spacing", spaced_incorrectly),
+                )
+                if failures[i]
+            ]
             invalid_anchors.append(
                 dict(
                     clock=name,
                     errors=len(bad),
                     first_interval_start_frame=int(frames[i]),
+                    timestamp_start_seconds=float(stamps[i]),
+                    timestamp_stop_seconds=float(stamps[i + 1]),
                     timestamp_step_frames=float(steps[i]),
-                    frame_step=int(frames[i + 1] - frames[i]),
+                    frame_step=int(frame_steps[i]),
+                    failed_checks=failed_checks,
                 )
             )
     if invalid_anchors:
@@ -159,13 +189,18 @@ def align(audio, markers, anchors):
     )
 
 
-def trial(sd, input_device, output_device):
+def _json_timestamp(stamp):
+    return stamp if math.isfinite(stamp) else str(stamp)
+
+
+def trial(sd, input_device, output_device, *, trace_callback_timing=False):
     output, markers, regions = stimuli()
     # One duplex callback provides ADC and DAC time in this stream's timebase.
-    # Receipt/perf_counter clocks are separate, with no calibrated transform.
+    # Host receipt stamps and elapsed process timings stay out of alignment.
     pending = Queue(maxsize=64)
     total = 29 * RATE
     adc_evidence = []
+    callback_timing = [] if trace_callback_timing else None
     received_clock = new_id()
     overflows = underflows = dropped = 0
     cursor = 0
@@ -175,6 +210,7 @@ def trial(sd, input_device, output_device):
 
     def callback(indata, outdata, frames, timing, status):
         nonlocal cursor, overflows, underflows, dropped
+        received = time.monotonic_ns()
         target = np.frombuffer(outdata, dtype=np.float32)
         target.fill(0)
         n = min(frames, max(0, len(output) - cursor))
@@ -183,18 +219,26 @@ def trial(sd, input_device, output_device):
             raise sd.CallbackStop
         overflows += bool(status.input_overflow or status.input_underflow)
         underflows += bool(status.output_underflow or status.output_overflow)
+        adc, dac = timing.inputBufferAdcTime, timing.outputBufferDacTime
         try:
-            pending.put_nowait(
-                (
-                    cursor,
-                    bytes(indata),
-                    timing.inputBufferAdcTime,
-                    timing.outputBufferDacTime,
-                    time.monotonic_ns(),
-                )
-            )
+            pending.put_nowait((cursor, bytes(indata), adc, dac, received))
+            queued = True
         except Full:
             dropped += 1
+            queued = False
+        if callback_timing is not None:
+            callback_timing.append(
+                dict(
+                    first_frame=cursor,
+                    frame_count=frames,
+                    adc_seconds=_json_timestamp(adc),
+                    dac_seconds=_json_timestamp(dac),
+                    current_seconds=_json_timestamp(timing.currentTime),
+                    receipt_monotonic_ns=received,
+                    status=str(status) if status else "",
+                    queued=queued,
+                )
+            )
         cursor += frames
 
     d = AudioSalienceDetector(config())
@@ -292,7 +336,7 @@ def trial(sd, input_device, output_device):
                 mapped.clear()
                 break
             mapped.append(dict(condition=condition, start_frame=start, stop_frame=stop))
-    return dict(
+    result = dict(
         status="OBSERVED_MARKER_ALIGNED" if valid else "BLOCKED_LABEL_ALIGNMENT",
         labelled_accuracy="NOT MEASURED",
         rate=RATE,
@@ -319,17 +363,31 @@ def trial(sd, input_device, output_device):
         audio_retained=False,
         limitation="Marker mapping does not certify per-stimulus observability. Independent capture-frame annotation is required for acoustic accuracy.",
     )
+    if callback_timing is not None:
+        result.update(
+            callback_timing=callback_timing,
+            sounddevice_version=sd.__version__,
+            portaudio_version=sd.get_portaudio_version()[1],
+        )
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=int, default=1)
     parser.add_argument("--output", type=int, default=3)
+    parser.add_argument(
+        "--callback-timing",
+        action="store_true",
+        help="Include raw callback timing and status metadata in the JSON report.",
+    )
     args = parser.parse_args()
     try:
         import sounddevice as sd
 
-        result = trial(sd, args.input, args.output)
+        result = trial(
+            sd, args.input, args.output, trace_callback_timing=args.callback_timing
+        )
     except (ImportError, RuntimeError, ValueError, OSError) as error:
         result = dict(
             status="BLOCKED_LIVE",

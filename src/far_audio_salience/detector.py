@@ -117,10 +117,12 @@ class _Episode:
     reported_peak: int
     hit: ResourceHit
     temporary: bool
+    reason_codes: tuple[str, ...] = ()
 
 
 # Drafts have no identity until the enclosing expected operation can commit.
 Draft = tuple[str, dict]
+_CANDIDATE_ALLOCATION_SKIPPED = "candidate_allocation_skipped"
 
 
 class AudioSalienceDetector:
@@ -177,6 +179,24 @@ class AudioSalienceDetector:
     def _commit_acoustic(self, engine, store, drafts):
         if engine is not None:
             self._acoustic, self._baselines = engine, store
+            limit = self.config.limits.max_baselines
+            for channel, provenance in engine._pending_candidate_skips:
+                health, _ = self._record_resource(
+                    _CANDIDATE_ALLOCATION_SKIPPED,
+                    ResourceHit(
+                        "max_baselines",
+                        len(store.administration) + 1,
+                        limit,
+                        1,
+                        "count",
+                    ),
+                    temporary=True,
+                    provenance=provenance,
+                    channels=(channel,),
+                    reason_codes=(_CANDIDATE_ALLOCATION_SKIPPED,),
+                )
+                drafts.extend(health)
+            engine._pending_candidate_skips.clear()
             drafts.extend(
                 self._end_episodes(
                     (
@@ -266,14 +286,49 @@ class AudioSalienceDetector:
         if resource == "acoustic_state_bytes":
             unit = "bytes"
         hit = ResourceHit(resource, observed, limit, max(0, observed - limit), unit)
+        drafts, episode = self._record_resource(
+            resource, hit, temporary=temporary, provenance=provenance
+        )
+        return self._batch(
+            drafts,
+            outcome="refused",
+            refusals=(
+                Refusal(
+                    operation,
+                    "temporary_capacity" if temporary else "hard_limit",
+                    temporary,
+                    hit,
+                    episode.episode_id,
+                ),
+            ),
+        )
+
+    def _record_resource(
+        self,
+        key: str,
+        hit: ResourceHit,
+        *,
+        temporary: bool,
+        provenance: Provenance | None,
+        channels: tuple[ChannelKey, ...] = (),
+        reason_codes: tuple[str, ...] = (),
+    ) -> tuple[list[Draft], _Episode]:
         now = time.monotonic_ns()
-        episode = self._episodes.get(resource)
+        episode = self._episodes.get(key)
         phase = None
         if episode is None:
             episode = _Episode(
-                new_id(), now, 0, 0, hit.exceedance, hit.exceedance, hit, temporary
+                new_id(),
+                now,
+                0,
+                0,
+                hit.exceedance,
+                hit.exceedance,
+                hit,
+                temporary,
+                reason_codes,
             )
-            self._episodes[resource] = episode
+            self._episodes[key] = episode
             phase = "first"
         episode.count += 1
         episode.hit = hit
@@ -295,6 +350,8 @@ class AudioSalienceDetector:
                         "event_type": "capacity_exhausted"
                         if temporary
                         else "resource_limit_violation",
+                        "channels": channels,
+                        "reason_codes": episode.reason_codes,
                         "resource": ResourceEpisode(
                             episode.episode_id,
                             phase,
@@ -307,19 +364,7 @@ class AudioSalienceDetector:
                     },
                 )
             )
-        return self._batch(
-            drafts,
-            outcome="refused",
-            refusals=(
-                Refusal(
-                    operation,
-                    "temporary_capacity" if temporary else "hard_limit",
-                    temporary,
-                    hit,
-                    episode.episode_id,
-                ),
-            ),
-        )
+        return drafts, episode
 
     def _end_episodes(self, resources: tuple[str, ...] | None = None) -> list[Draft]:
         now = time.monotonic_ns()
@@ -335,6 +380,7 @@ class AudioSalienceDetector:
                         "event_type": "capacity_exhausted"
                         if episode.temporary
                         else "resource_limit_violation",
+                        "reason_codes": episode.reason_codes,
                         "resource": ResourceEpisode(
                             episode.episode_id,
                             "end",

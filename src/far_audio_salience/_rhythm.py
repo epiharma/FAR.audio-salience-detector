@@ -126,11 +126,16 @@ class Rhythm:
                     for p in profiles
                 )
                 short = intervals[-min(config.rhythm_horizons) :]
-                # A short plateau can confirm a step while the longer fit still
-                # straddles it. A short trend alone cannot explain a conflicting
-                # longer history (e.g. two interleaved pulse trains).
-                plateau = (
-                    max(short) - min(short) <= config.rhythm_absolute_jitter_seconds
+                short_spread = max(short) - min(short)
+                plateau = short_spread <= config.rhythm_absolute_jitter_seconds
+                # A longer fit can straddle a valid step. Accept a short plateau
+                # within frame quantization, or require as many steady intervals
+                # as acquisition before using the jitter allowance.
+                recent = intervals[-max(len(short), config.rhythm_min_intervals) :]
+                step_plateau = plateau and (
+                    round(short_spread * rate) <= 1
+                    or max(recent) - min(recent)
+                    <= config.rhythm_absolute_jitter_seconds
                 )
                 long_fit = bool(
                     windows and windows[-1][0] == max(config.rhythm_horizons)
@@ -139,7 +144,7 @@ class Rhythm:
                 if (
                     not windows
                     or not coherent
-                    or (enough_long_history and not long_fit and not plateau)
+                    or (enough_long_history and not long_fit and not step_plateau)
                 ):
                     self.rate = None
                     self.reason = "ambiguous_impulse_sequence"
@@ -165,7 +170,6 @@ class Rhythm:
                     excess = (current - reference) / (absolute + relative * reference)
                     # A single long observed interval cannot establish slowing:
                     # require the short horizon to support the new level/trend.
-                    short_spread = max(short) - min(short)
                     support = (
                         short_spread
                         <= config.rhythm_absolute_jitter_seconds * 2
