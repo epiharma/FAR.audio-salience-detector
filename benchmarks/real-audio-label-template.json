@@ -1,0 +1,23 @@
+{
+  "schema": "far-external-audio-labels-v1",
+  "status": "UNREVIEWED_TEMPLATE_NOT_MEASUREMENTS",
+  "recording_id": null,
+  "provenance": null,
+  "sample_rate_hz": null,
+  "channels": [],
+  "frame_count": null,
+  "device_host_api": null,
+  "digital_gain": null,
+  "operating_system_volume": "UNKNOWN",
+  "microphone_gain_agc_echo_cancellation": "UNKNOWN",
+  "clock_alignment_method": null,
+  "clock_alignment_uncertainty_frames": null,
+  "marker_observed_frames": [],
+  "valid_intervals": [],
+  "excluded_intervals": [],
+  "annotations": [],
+  "annotation_fields": ["channel_id", "kind", "start_frame", "stop_frame", "timing_uncertainty_frames", "review_status", "reviewer_notes"],
+  "allowed_kinds": ["sound_onset", "sound_offset", "tempo_increase", "tempo_decrease", "loudness_spike", "loudness_drop"],
+  "privacy": "Do not retain conversation; recording requires explicit operator choice. No automatic upload.",
+  "reviewer": null
+}

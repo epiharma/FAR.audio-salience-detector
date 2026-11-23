@@ -1,4 +1,4 @@
-"""Optional blocking microphone adapter; FAR acoustic scoring is not implemented."""
+"""Optional blocking microphone adapter; use --acoustic for experimental DSP."""
 
 import argparse
 import importlib
@@ -10,6 +10,7 @@ from collections import deque
 from dataclasses import asdict, dataclass, field
 
 from far_audio_salience import (
+    AcousticConfig,
     AcquisitionQuality,
     AudioSalienceDetector,
     ClockStamp,
@@ -44,9 +45,16 @@ class Statistics:
     latency: deque = field(default_factory=lambda: deque(maxlen=2048))
     device: dict | None = None
     actual: dict | None = None
+    acoustic_changes: dict = field(default_factory=dict)
 
     def consume(self, batch):
         self.results += len(batch.salience)
+        for result in batch.salience:
+            for change in result.changes:
+                if change.revision == 1:
+                    self.acoustic_changes[change.kind] = (
+                        self.acoustic_changes.get(change.kind, 0) + 1
+                    )
         self.health += len(batch.health)
         self.lifecycle += len(batch.baseline_lifecycle)
         self.refusals += len(batch.refusals)
@@ -93,6 +101,7 @@ class Statistics:
             captured_frames=self.captured,
             accepted_frames=self.accepted,
             salience_results=self.results,
+            acoustic_changes=dict(self.acoustic_changes),
             health_events=self.health,
             baseline_events=self.lifecycle,
             overflows=self.overflows,
@@ -109,7 +118,7 @@ class Statistics:
         )
 
 
-def configuration(rate, block_size):
+def configuration(rate, block_size, *, acoustic=False):
     """One source/channel, 250 ms comparison; explicit smoke-test resource sizes."""
     return DetectorConfig(
         ResourceLimits(
@@ -126,6 +135,7 @@ def configuration(rate, block_size):
         max_reorder_delay_ns=0,
         comparison_retention_ns=250_000_000,
         reporting=ResourceReporting(aggregate_every=10, materially_worse_by=4096),
+        acoustic=AcousticConfig() if acoustic else None,
     )
 
 
@@ -161,7 +171,13 @@ def run(
                 f"Input settings unsupported: {error}\nAvailable devices:\n{sd.query_devices()}"
             ) from error
         stats.device = dict(info)
-        detector = detector_factory(configuration(args.sample_rate, args.block_size))
+        detector = detector_factory(
+            configuration(
+                args.sample_rate,
+                args.block_size,
+                acoustic=getattr(args, "acoustic", False),
+            )
+        )
         source = SourceSpec.microphone(
             label=str(info["name"]), sample_rate_hz=args.sample_rate
         )
@@ -192,7 +208,9 @@ def run(
                 f"Actual stream settings differ from requested: {stats.actual}"
             )
         emit(
-            "Microphone contract smoke test: acoustic extraction/scoring/learning are not implemented; None scores and not_implemented are expected."
+            "Experimental DSP smoke test; receipt-only timing, uncalibrated scores."
+            if getattr(args, "acoustic", False)
+            else "Microphone contract smoke test: acoustic extraction/scoring/learning are not implemented; None scores and not_implemented are expected."
         )
         emit(
             "Frames are delivered-buffer positions within each FAR epoch, not a verified hardware counter. Silence is valid audio; idle calls alone imply no loss."
@@ -318,6 +336,11 @@ def main(argv=None):
     parser.add_argument("--sample-rate", type=positive_int, default=48000)
     parser.add_argument("--block-size", type=positive_int, default=480)
     parser.add_argument("--duration", type=positive_duration)
+    parser.add_argument(
+        "--acoustic",
+        action="store_true",
+        help="Enable experimental DSP (requires [dsp])",
+    )
     args = parser.parse_args(argv)
     if args.device is not None and args.device.isdecimal():
         args.device = int(args.device)

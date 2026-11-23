@@ -49,6 +49,16 @@ def save(detector: AudioSalienceDetector, path: Path) -> None:
         ],
         "geometry": None if detector._geometry is None else asdict(detector._geometry),
     }
+    from ._acoustic_snapshot import encode
+
+    acoustic = (
+        encode(detector._acoustic)
+        if detector._acoustic is not None
+        else detector._saved_acoustic
+    )
+    if acoustic is not None:
+        payload["version"] = 2
+        payload["acoustic"] = acoustic
     data = json.dumps(
         payload, allow_nan=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
@@ -142,6 +152,19 @@ def load(detector: AudioSalienceDetector, path: Path) -> None:
 
 
 def _restore(detector, payload):
+    acoustic = None
+    if (
+        isinstance(payload, dict)
+        and type(payload.get("version")) is int
+        and payload["version"] == 2
+    ):
+        payload = dict(payload)
+        if "acoustic" not in payload:
+            raise SnapshotError("missing acoustic parameters")
+        acoustic = payload.pop("acoustic")
+        if acoustic is None:
+            raise SnapshotError("invalid acoustic parameters")
+        payload["version"] = 1
     _keys(
         payload,
         (
@@ -325,6 +348,25 @@ def _restore(detector, payload):
         geometry = MicrophoneGeometry(
             _id(g["geometry_id"]), _id(g["reference_frame_id"]), tuple(positions)
         )
+    from ._acoustic_snapshot import restore, validate
+
+    engine = None
+    if acoustic is not None:
+        acoustic = validate(
+            acoustic, identities, records, limits, detector.config.acoustic
+        )
+        if detector._acoustic is not None:
+            engine = detector._acoustic.fork(set())
+            restore(engine, acoustic)
+            try:
+                engine.reserve([], limits)
+            except Exception as error:
+                raise SnapshotError(
+                    "acoustic restore exceeds resource limits"
+                ) from error
+    if engine is not None:
+        detector._acoustic = engine
+    detector._saved_acoustic = acoustic
     detector._sources = sources
     detector._identities = identities
     detector._baselines.records = records

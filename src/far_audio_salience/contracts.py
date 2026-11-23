@@ -1,10 +1,12 @@
-"""Public records for the streaming contract; no acoustic model is supplied."""
+"""Public streaming, lifecycle and opt-in acoustic result contracts."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 from uuid import uuid4
+
+from .acoustic_config import AcousticConfig
 
 
 def new_id() -> str:
@@ -234,8 +236,11 @@ class DetectorConfig:
     comparison_retention_ns: int
     reporting: ResourceReporting
     promotion_mode: Literal["automatic", "external_approval"] = "external_approval"
+    acoustic: AcousticConfig | None = None
 
     def __post_init__(self) -> None:
+        if self.acoustic is not None and not isinstance(self.acoustic, AcousticConfig):
+            raise ValueError("acoustic must be AcousticConfig or None")
         if not isinstance(self.limits, ResourceLimits) or not isinstance(
             self.reporting, ResourceReporting
         ):
@@ -268,6 +273,80 @@ class EmissionHeader:
 
 
 @dataclass(frozen=True, slots=True)
+class AcousticQuantity:
+    name: str
+    value: float
+    unit: str
+
+
+@dataclass(frozen=True, slots=True)
+class AcousticBandChange:
+    band_id: str
+    start_frame: int
+    last_observed_frame: int
+    end_frame: int | None
+    power: float
+    delta_db: float | None
+
+
+ChangeKind = Literal[
+    "sound_onset",
+    "sound_offset",
+    "tempo_increase",
+    "tempo_decrease",
+    "loudness_spike",
+    "loudness_drop",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class AcousticChange:
+    change_id: str
+    revision: int
+    kind: ChangeKind
+    phase: Literal["detected", "completed", "interrupted"]
+    channel: ChannelKey
+    source: SourceRef
+    start_frame: int
+    confirmed_frame: int
+    last_observed_frame: int
+    end_frame: int | None
+    duration_frames: int | None
+    bands: tuple[AcousticBandChange, ...]
+    quantities: tuple[AcousticQuantity, ...]
+    confidence: float | None
+    provenance: Provenance
+    sequence_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AcousticBandPower:
+    band_id: str
+    power: float | None
+    state: str
+    schema_id: str
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AcousticWindow:
+    interval: SourceInterval
+    rms: float
+    power: float
+    peak: float
+    bands: tuple[AcousticBandPower, ...]
+    tempo_hz: float | None
+    tempo_reason: str | None
+    sequence_id: str | None
+    confidence: float
+    assessment_eligible: bool
+    established_learning_eligible: bool
+    candidate_learning_eligible: bool
+    continuity_revision: int
+    horizons: tuple[tuple[float, float | None], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class SalienceResult:
     header: EmissionHeader
     channels: tuple[ChannelKey, ...]
@@ -283,6 +362,8 @@ class SalienceResult:
     stream_discontinuity_score: float | None = None
     features: tuple[tuple[str, float], ...] | None = None
     unavailable_reasons: tuple[str, ...] = ("not_implemented",)
+    changes: tuple[AcousticChange, ...] = ()
+    windows: tuple[AcousticWindow, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

@@ -12,6 +12,7 @@ dependencies = []
 
 [project.optional-dependencies]
 mic = ["sounddevice>=0.5"]
+dsp = ["numpy>=1.26"]
 dev = [
     "build>=1.2",
     "pytest>=8.3",

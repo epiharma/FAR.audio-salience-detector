@@ -1,18 +1,18 @@
 # FAR Local Audio Salience Detector
 
-**Status: Research / Streaming Contract Skeleton**
+**Status: Research / Experimental Acoustic Model**
 
-FAR is an independent Python package intended for research and development of a
-stateful, streaming local audio salience detector, with eventual integration into
-a larger AGI proof of concept.
+FAR is an independent Python package for stateful, streaming local acoustic
+change detection. The opt-in DESIGN-003 model detects sound onset/offset,
+tempo increase/decrease, and extreme loudness spike/drop per channel.
+It does not classify sounds or interpret global importance.
 
-**The acoustic detector is not implemented yet.** The package implements typed
-streaming contracts, bounded per-source ingestion/finalization, health events,
-eligibility and alignment interfaces, administrative baseline/candidate lifecycle,
-and metadata snapshots. Finalized valid observations have explicit unavailable
-assessments: acoustic scores, confidence, and `is_salient` are `None` with
-`not_implemented`. No extractor, model learning, matching/readiness algorithm,
-score calibration/composition, or audio capture is supplied.
+The default configuration preserves the infrastructure-only contract skeleton:
+acoustic fields remain unavailable until `DetectorConfig(acoustic=AcousticConfig(),
+...)` explicitly enables DSP. Install with `pip install -e ".[dev,dsp]"`.
+NumPy is optional; no capture or AGI SDK is required by the package.
+See [the experimental model guide](docs/acoustic-model.md) for contracts,
+configuration, persistence, measured pilot results and limitations.
 
 ## Scope and design
 
@@ -35,14 +35,14 @@ block and produce health events while other channels continue.
 
 All calls must be serialized by the application. FAR provides no capture thread,
 clock synchronizer, resampler, broker, background timer, or global interpretation.
-Snapshot files use bounded, versioned JSON metadata with atomic replacement;
-they contain no learned acoustic parameters because no learning algorithm exists.
-Restore preserves candidate IDs and blocks but starts a new run with no active
-sources, buffered audio, or alignment claims. Reset operations never delete files.
+Snapshots use bounded, versioned JSON with atomic replacement. Version 2 stores
+learned scalar acoustic parameters and candidate controls; legacy metadata-only
+version 1 remains readable. Restart preserves compatible models and identities,
+with no active sources, buffered audio, impulse sequences or alignment claims.
 
-Automatic window sizing and score-weight learning remain future enhancements.
-Algorithms, scoring, calibration, and quantitative acceptance budgets remain open.
-There are no model performance results or P0 live-microphone validation results.
+Numerical thresholds and heuristic confidence are experimental, not calibrated
+physical sound pressure or deployment accuracy guarantees. Pattern novelty and
+joint-channel acoustic inference remain unavailable.
 
 ## Development installation
 
@@ -71,7 +71,8 @@ Install the package in editable mode with separate development tools:
 python -m pip install -e ".[dev]"
 ```
 
-There are no runtime dependencies. Tests require no microphone hardware, API
+The base package has no runtime dependencies; acoustic tests require `[dsp]`.
+Tests require no microphone hardware, API
 keys, external databases, or network services.
 
 ## Checks and builds

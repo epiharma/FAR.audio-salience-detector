@@ -1,0 +1,722 @@
+[
+  {
+    "name": "colored:16031:16000:white_gain",
+    "family": "white_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "db70a2eb6e6cecc3ce7cf9bb8eb56320156dc062eaf966c15e7c69255291fc95"
+  },
+  {
+    "name": "colored:16031:16000:pink_gain",
+    "family": "pink_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "ccfbf88abe2c3cf48e4d0170fd98955ee9317184ae0e49958e92a2b9a6adfd9f"
+  },
+  {
+    "name": "colored:16031:16000:brown_gain",
+    "family": "brown_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "80ea6853e0da94ccdd99c6b61b23dda7250ec48dfe4c2ec73bfc43d30ae8906f"
+  },
+  {
+    "name": "colored:16031:16000:colored_hum_component_0.02",
+    "family": "colored_hum_component_0.02",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 27200,
+    "sample_sha256": "a661ae878ab0d7df99817b771f86fde4d1fe586d8b1158bee75d626c46981398"
+  },
+  {
+    "name": "colored:16031:16000:colored_hum_component_0.06",
+    "family": "colored_hum_component_0.06",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 27200,
+    "sample_sha256": "223e95571e63b3c8f93c338fb7b35a36b44f7286e773286205356dba23433b83"
+  },
+  {
+    "name": "colored:16031:48000:white_gain",
+    "family": "white_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "f2966039625544f282a26e47d14b5912313768de5f4e0fd28d9b0a79807bff90"
+  },
+  {
+    "name": "colored:16031:48000:pink_gain",
+    "family": "pink_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "5b20359bcd1b37fe3ebfa417225afccf8ece168d5be79186c2b4506ea3ecbdc9"
+  },
+  {
+    "name": "colored:16031:48000:brown_gain",
+    "family": "brown_gain",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "85ab20852c63f4218d3758f15c07548e9f2309a5292f3cbc1180d7e0f49e5ca8"
+  },
+  {
+    "name": "colored:16031:48000:colored_hum_component_0.02",
+    "family": "colored_hum_component_0.02",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 81600,
+    "sample_sha256": "89f1b3c3ba8a463423fc779fd2cd64ed29a62cffbd03efbe384d7be9f9616eff"
+  },
+  {
+    "name": "colored:16031:48000:colored_hum_component_0.06",
+    "family": "colored_hum_component_0.06",
+    "split": "additional_noise",
+    "seed": 16031,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 81600,
+    "sample_sha256": "c9e251c8a0c115c8e95de151cbb802d5eaadfffca14ccb1710a46f1281babd36"
+  },
+  {
+    "name": "colored:99277:16000:white_gain",
+    "family": "white_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "e76746dcbad748452ad7deee599bcdd2edb70df5f76a47ccc97d7cb0c9dc4875"
+  },
+  {
+    "name": "colored:99277:16000:pink_gain",
+    "family": "pink_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "509b46e2eba6368343642ebb4490d7c9e833bf84b765f8f1d1eb498148c01a11"
+  },
+  {
+    "name": "colored:99277:16000:brown_gain",
+    "family": "brown_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 27200,
+    "sample_sha256": "84c9ec76bae917d985d4c5b8c0e240436fd355bdf8afe8ce7ce51e2ed2204212"
+  },
+  {
+    "name": "colored:99277:16000:colored_hum_component_0.02",
+    "family": "colored_hum_component_0.02",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 27200,
+    "sample_sha256": "2f3c645f109c1633d064e6163777e314c2f84bfc5bc22dd768627ee81b50b684"
+  },
+  {
+    "name": "colored:99277:16000:colored_hum_component_0.06",
+    "family": "colored_hum_component_0.06",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 9600,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 17600,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 27200,
+    "sample_sha256": "e9fb72c1e14bac72642caad2e0a307c70ef259337e01dd0fe7d72b72164fb01a"
+  },
+  {
+    "name": "colored:99277:48000:white_gain",
+    "family": "white_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "c76db604b07b409b69450b1d7f8854b97d04660d6949335184279f5e6c62b9d8"
+  },
+  {
+    "name": "colored:99277:48000:pink_gain",
+    "family": "pink_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "8ad73080162898a6041adfaca3de5eeac6e835099a94154002f2d2891023ba5d"
+  },
+  {
+    "name": "colored:99277:48000:brown_gain",
+    "family": "brown_gain",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "loudness_drop",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "loudness_spike",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "One continuous colored-noise realization normalized to .9 peak; unchanged component presence across gain changes 1/.1/1.",
+    "frames": 81600,
+    "sample_sha256": "557ae4849849671d0e7e16fa7fdd5c6749c3a566814d3c955a104a17f8d5e3c5"
+  },
+  {
+    "name": "colored:99277:48000:colored_hum_component_0.02",
+    "family": "colored_hum_component_0.02",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 81600,
+    "sample_sha256": "3bae690574acef5c2ab86fb707f27a27853aedf1e348896e9c39ab6d604a2acf"
+  },
+  {
+    "name": "colored:99277:48000:colored_hum_component_0.06",
+    "family": "colored_hum_component_0.06",
+    "split": "additional_noise",
+    "seed": 99277,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 28800,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_offset",
+        "channel": 0,
+        "frame": 52800,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Band-limited pink background RMS .03 plus .06-peak hum; .02/.06-peak mid-band component. Digital power ratio only, not field SNR.",
+    "frames": 81600,
+    "sample_sha256": "f26406c388cbb1cc689466509918307c62a4bacc85e178e8c0310e9522d045a0"
+  }
+]

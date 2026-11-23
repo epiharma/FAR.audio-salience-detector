@@ -1,0 +1,258 @@
+[
+  {
+    "name": "lifecycle:16000:merge_reacquire",
+    "family": "merge_reacquire",
+    "split": "lifecycle",
+    "seed": null,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 6400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 10400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 14400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 18400,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Observed continuous audio. Pulse widths merge to a continuous carrier, or pause beyond the fixed deadline. No injected missing data.",
+    "frames": 124800,
+    "sample_sha256": "4ea8f1032dcf2c2fe1aef23ab69cca2b01af22a70a3a55236b2c6e1a153b91e8"
+  },
+  {
+    "name": "lifecycle:16000:pause_timeout",
+    "family": "pause_timeout",
+    "split": "lifecycle",
+    "seed": null,
+    "rate": 16000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 6400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 10400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 14400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 18400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 66400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 70400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 74400,
+        "early": 320,
+        "late": 1920
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 78400,
+        "early": 320,
+        "late": 1920
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Observed continuous audio. Pulse widths merge to a continuous carrier, or pause beyond the fixed deadline. No injected missing data.",
+    "frames": 124800,
+    "sample_sha256": "016f01115f7ec48467917e2bbe98817d4769dc6411bedf6889ba4fd67cd2faad"
+  },
+  {
+    "name": "lifecycle:48000:merge_reacquire",
+    "family": "merge_reacquire",
+    "split": "lifecycle",
+    "seed": null,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 19200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 31200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 43200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 55200,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Observed continuous audio. Pulse widths merge to a continuous carrier, or pause beyond the fixed deadline. No injected missing data.",
+    "frames": 374400,
+    "sample_sha256": "74c77d6ca64e748affa81ca00f61bc3abbac6964941408091023fa432bdfb85f"
+  },
+  {
+    "name": "lifecycle:48000:pause_timeout",
+    "family": "pause_timeout",
+    "split": "lifecycle",
+    "seed": null,
+    "rate": 48000,
+    "channels": 1,
+    "labels": [
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 19200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 31200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 43200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 55200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 199200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 211200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 223200,
+        "early": 960,
+        "late": 5760
+      },
+      {
+        "kind": "sound_onset",
+        "channel": 0,
+        "frame": 235200,
+        "early": 960,
+        "late": 5760
+      }
+    ],
+    "scored": [
+      "sound_onset",
+      "sound_offset",
+      "tempo_increase",
+      "tempo_decrease",
+      "loudness_spike",
+      "loudness_drop"
+    ],
+    "tempo": null,
+    "notes": "Observed continuous audio. Pulse widths merge to a continuous carrier, or pause beyond the fixed deadline. No injected missing data.",
+    "frames": 374400,
+    "sample_sha256": "bb22be45cbd71c1f93cd8ee03f2a6a40ae6a19aa1dcc2f897bfd90dbd0d3bfd0"
+  }
+]

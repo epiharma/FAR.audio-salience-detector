@@ -1,12 +1,14 @@
-"""Bounded streaming infrastructure. Acoustic capabilities are unavailable."""
+"""Bounded streaming infrastructure with optional transactional acoustic DSP."""
 
 from __future__ import annotations
 
 import math
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from ._acoustic import AcousticEngine, AcousticLimit
 from ._history import _Index, _planned, _Timing
 from .baselines import BaselineStore, ReadinessEvidence
 from .contracts import (
@@ -124,8 +126,8 @@ Draft = tuple[str, dict]
 class AudioSalienceDetector:
     """One synchronous owner, many independently clocked acquisition sources.
 
-    ``process`` emits honest unavailable assessments for finalized valid audio.
-    It never extracts acoustic features, scores sound, or trains a baseline.
+    ``process`` preserves infrastructure-only behavior unless ``acoustic`` is
+    configured. Opt-in DSP evaluates finalized per-channel audio transactionally.
     """
 
     def __init__(self, config: DetectorConfig) -> None:
@@ -146,6 +148,46 @@ class AudioSalienceDetector:
         self._reference_times: dict[str, int] = {}
         self._feature_clocks: dict[str, str] = {}
         self._geometry: MicrophoneGeometry | None = None
+        self._acoustic = AcousticEngine(config.acoustic) if config.acoustic else None
+        self._saved_acoustic = None
+
+    def _acoustic_draft(self, work, borrowed=None, origin=0, *, ending=False):
+        """Evaluate owned draft state before committing ingestion or learning."""
+        if self._acoustic is None:
+            return None, None, []
+        keys = {ChannelKey(s.ref.source_id, c) for s, c, *_ in work}
+        engine = self._acoustic.fork(keys)
+        store = deepcopy(self._baselines)
+        engine.reserve([(s, c) for s, c, *_ in work], self.config.limits)
+        drafts = engine.evaluate(
+            work,
+            borrowed or {},
+            origin,
+            store,
+            self.config.limits,
+            self.config.promotion_mode,
+        )
+        if ending:
+            for spec, channel, _, _, frontier in work:
+                drafts.extend(engine.interrupt(spec, channel, frontier))
+        engine.reserve([], self.config.limits)
+        drafts.extend(engine._pending_lifecycle)
+        return engine, store, drafts
+
+    def _commit_acoustic(self, engine, store, drafts):
+        if engine is not None:
+            self._acoustic, self._baselines = engine, store
+            drafts.extend(
+                self._end_episodes(
+                    (
+                        "acoustic_state_bytes",
+                        "acoustic_parameter_features",
+                        "acoustic_windows_per_call",
+                        "acoustic_revisions_per_call",
+                        "acoustic_open_changes",
+                    )
+                )
+            )
 
     def _check_open(self) -> None:
         if self._closed:
@@ -221,6 +263,8 @@ class AudioSalienceDetector:
         provenance: Provenance | None = None,
     ) -> OutputBatch:
         # Keys are package-owned limit names, never attacker-supplied IDs.
+        if resource == "acoustic_state_bytes":
+            unit = "bytes"
         hit = ResourceHit(resource, observed, limit, max(0, observed - limit), unit)
         now = time.monotonic_ns()
         episode = self._episodes.get(resource)
@@ -514,6 +558,7 @@ class AudioSalienceDetector:
             )
         # Stage immutable descriptor plans; payload is copied only after preflight.
         lanes = dict(self._lanes)
+        work = []
         borrowed: dict[ChannelKey, memoryview] = {}
         drafts: list[Draft] = []
         accepted, ignored, reasons = [], [], []
@@ -591,7 +636,7 @@ class AudioSalienceDetector:
                     self.config.max_reorder_delay_ns * spec.sample_rate_hz + 999_999_999
                 ) // 1_000_000_000
                 frontier = max(lane.watermark, lane.high_water - delay)
-                self._finalize_lane(spec, channel, lane, frontier, drafts)
+                self._finalize_lane(spec, channel, lane, frontier, drafts, work)
             elif start >= lane.watermark:
                 ignored.append(span)
                 reasons.append("duplicate")
@@ -609,11 +654,19 @@ class AudioSalienceDetector:
                     chunk.received_at,
                 ),
             )
+        try:
+            engine, store, extra = self._acoustic_draft(work, borrowed, start)
+        except AcousticLimit as error:
+            return self._refuse_resource(
+                error.resource, error.observed, error.limit, temporary=True
+            )
+        drafts.extend(extra)
         for key, values in borrowed.items():
             lane = lanes[key]
             lane.pending = lane.pending.materialized(values, start)
             lane.history = lane.history.materialized(values, start).compacted()
         self._lanes = lanes
+        self._commit_acoustic(engine, store, drafts)
         if chunk.quality and (
             chunk.quality.overflow
             or chunk.quality.reported_dropped_frames
@@ -680,9 +733,12 @@ class AudioSalienceDetector:
         lane: _Lane,
         frontier: int,
         drafts: list[Draft],
+        work=None,
     ) -> None:
         key = ChannelKey(spec.ref.source_id, channel)
         finalized, pending = lane.pending.split(frontier)
+        if work is not None:
+            work.append((spec, channel, finalized.spans, lane.watermark, frontier))
         groups = []
         for span in finalized.spans:
             if (
@@ -744,16 +800,17 @@ class AudioSalienceDetector:
                         measured.ns + 1_000_000_000 // spec.sample_rate_hz,
                     )
                 )
-                drafts.append(
-                    (
-                        "salience",
-                        {
-                            "channels": (key,),
-                            "timestamp": stamp,
-                            "provenance": provenance,
-                        },
+                if self._acoustic is None:
+                    drafts.append(
+                        (
+                            "salience",
+                            {
+                                "channels": (key,),
+                                "timestamp": stamp,
+                                "provenance": provenance,
+                            },
+                        )
                     )
-                )
             cursor = b
         if frontier > cursor:
             self._gap(spec, channel, lane, cursor, frontier, drafts)
@@ -801,12 +858,23 @@ class AudioSalienceDetector:
             raise StructuralInputError("watermarks cannot move backwards")
         lanes = dict(self._lanes)
         drafts: list[Draft] = []
+        work = []
         for channel in mark.channel_ids:
             key = ChannelKey(spec.ref.source_id, channel)
             lanes[key] = replace(lanes[key])
-            self._finalize_lane(spec, channel, lanes[key], mark.before_frame, drafts)
+            self._finalize_lane(
+                spec, channel, lanes[key], mark.before_frame, drafts, work
+            )
             lanes[key].history = lanes[key].history.compacted()
+        try:
+            engine, store, extra = self._acoustic_draft(work)
+        except AcousticLimit as error:
+            return self._refuse_resource(
+                error.resource, error.observed, error.limit, temporary=True
+            )
+        drafts.extend(extra)
         self._lanes = lanes
+        self._commit_acoustic(engine, store, drafts)
         return self._batch(drafts, finalized=(mark,))
 
     def end_source(self, ref: SourceRef) -> OutputBatch:
@@ -815,13 +883,26 @@ class AudioSalienceDetector:
         if spec.ref != ref or ref.source_id not in self._active:
             raise StateError("source is not active")
         drafts: list[Draft] = []
+        work = []
         marks = []
+        lanes = dict(self._lanes)
         for channel in spec.channel_ids:
-            lane = self._lanes[ChannelKey(ref.source_id, channel)]
+            key = ChannelKey(ref.source_id, channel)
+            lane = replace(lanes[key])
+            lanes[key] = lane
             frontier = max(lane.watermark, lane.high_water)
-            self._finalize_lane(spec, channel, lane, frontier, drafts)
+            self._finalize_lane(spec, channel, lane, frontier, drafts, work)
             lane.history = lane.history.compacted()
             marks.append(SourceWatermark(ref, (channel,), frontier))
+        try:
+            engine, store, extra = self._acoustic_draft(work, ending=True)
+        except AcousticLimit as error:
+            return self._refuse_resource(
+                error.resource, error.observed, error.limit, temporary=True
+            )
+        drafts.extend(extra)
+        self._lanes = lanes
+        self._commit_acoustic(engine, store, drafts)
         self._active.remove(ref.source_id)
         return self._batch(drafts, finalized=tuple(marks))
 
@@ -858,6 +939,24 @@ class AudioSalienceDetector:
                 ),
             )
         drafts: list[Draft] = []
+        if self._acoustic is not None:
+            engine = self._acoustic.fork(
+                {ChannelKey(spec.ref.source_id, c) for c in item.channel_ids}
+            )
+            try:
+                for channel in item.channel_ids:
+                    lane = self._lanes[ChannelKey(spec.ref.source_id, channel)]
+                    guard = (
+                        lane.high_water
+                        if item.interval is None
+                        else item.interval.stop_frame
+                    )
+                    drafts.extend(engine.interrupt(spec, channel, guard, guard=guard))
+            except AcousticLimit as error:
+                return self._refuse_resource(
+                    error.resource, error.observed, error.limit, temporary=True
+                )
+            self._acoustic = engine
         for channel in item.channel_ids:
             lane = self._lanes[ChannelKey(spec.ref.source_id, channel)]
             if item.interval is None:
@@ -1682,6 +1781,10 @@ class AudioSalienceDetector:
 
     def reset_learning(self) -> OutputBatch:
         self._idle()
+        self._acoustic = (
+            AcousticEngine(self.config.acoustic) if self.config.acoustic else None
+        )
+        self._saved_acoustic = None
         self._baselines.records.clear()
         self._lanes.clear()
         self._features.clear()
@@ -1696,6 +1799,10 @@ class AudioSalienceDetector:
 
     def factory_reset(self) -> OutputBatch:
         self._idle()
+        self._acoustic = (
+            AcousticEngine(self.config.acoustic) if self.config.acoustic else None
+        )
+        self._saved_acoustic = None
         self._sources.clear()
         self._identities.clear()
         self._lanes.clear()
@@ -1732,7 +1839,10 @@ class AudioSalienceDetector:
             return self._batch(outcome="no_change")
         output = self._batch(outcome="no_change")
         for source_id in tuple(self._active):
-            output = self._merge(output, self.end_source(self._sources[source_id].ref))
+            ended = self.end_source(self._sources[source_id].ref)
+            output = self._merge(output, ended)
+            if ended.refusals:
+                return output
         # Abort pending relationships without inventing reference-clock progress.
         for window in tuple(self._windows.values()):
             output = self._merge(
@@ -1756,5 +1866,8 @@ class AudioSalienceDetector:
         self._window_alignment.clear()
         output = self._merge(output, self._batch(self._end_episodes()))
         self._lanes.clear()
+        if self._acoustic is not None:
+            self._acoustic.states.clear()
+            self._acoustic._pending_lifecycle.clear()
         self._closed = True
         return output

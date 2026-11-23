@@ -1,7 +1,13 @@
-"""FAR streaming contract skeleton; acoustic detection is not implemented."""
+"""FAR streaming contracts and explicitly enabled experimental acoustic DSP."""
 
+from .acoustic_config import AcousticConfig, FrequencyBand
 from .baselines import ReadinessEvidence
 from .contracts import (
+    AcousticBandChange,
+    AcousticBandPower,
+    AcousticChange,
+    AcousticQuantity,
+    AcousticWindow,
     AcquisitionQuality,
     AudioChunk,
     BaselineCompatibility,
@@ -54,6 +60,13 @@ from .eligibility import (
 )
 
 __all__ = [
+    "AcousticConfig",
+    "FrequencyBand",
+    "AcousticBandChange",
+    "AcousticBandPower",
+    "AcousticChange",
+    "AcousticQuantity",
+    "AcousticWindow",
     "AcquisitionQuality",
     "AlignmentEvidence",
     "AlignmentPolicy",

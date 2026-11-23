@@ -4,3 +4,10 @@ recursive-include docs/adr *.md
 recursive-include benchmarks *.py *.md
 recursive-include examples *.py *.md
 recursive-include tests *.py
+
+include docs/acoustic-model.md
+
+recursive-include benchmarks *manifest*.json
+include benchmarks/real-audio-label-template.json
+include benchmarks/acoustic-broader-validation-2026-11-23.json
+include benchmarks/acoustic-broader-remediation-2026-11-23.json.gz

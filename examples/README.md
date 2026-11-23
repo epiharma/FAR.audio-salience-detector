@@ -85,8 +85,21 @@ Capture closes before final FAR source shutdown. Batches from `end_source()` and
 `close()` are included in the final counts. Device errors or refusals return a
 nonzero exit status; Ctrl+C performs normal cleanup.
 
-This tests capture and streaming contracts. Acoustic feature extraction, salience
-scoring and baseline learning remain unimplemented. `None` scores and
+Without `--acoustic`, this tests capture and streaming contracts only. Acoustic
+feature extraction, scoring and learning are disabled. `None` scores and
 `not_implemented` results are expected even when speaking or clapping. Silence is
 valid audio, not missing data; pausing calls alone does not require FAR to infer
 an interruption. Mocked adapter tests do not establish live-hardware validation.
+
+## Experimental acoustic model
+
+Install `pip install -e ".[mic,dsp]"` and add `--acoustic` to the live script:
+
+```sh
+python examples/live_microphone.py --acoustic --device 1 --duration 3
+```
+
+The option enables the experimental per-channel DESIGN-003 model. The default
+still exercises infrastructure only. Local change counts supplement timing and
+health statistics. No audio is recorded; receipt timestamps do not measure hardware
+acquisition latency. See [model policy and pilot limitations](../docs/acoustic-model.md).
