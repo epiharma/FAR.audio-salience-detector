@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+mic = ["sounddevice>=0.5"]
 dev = [
     "build>=1.2",
     "pytest>=8.3",
