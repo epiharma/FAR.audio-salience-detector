@@ -1,6 +1,6 @@
 # FAR — Local Audio Salience Detector v1
 
-**Project:** FAR (Field Agent Rashulya)  
+**Project:** FAR
 **Document type:** Architecture / Research Design  
 **Status:** Approved high-level requirements; implementation details remain open  
 **Target:** Independent installable package, suitable for integration with the AGI PoC Sensory Layer
