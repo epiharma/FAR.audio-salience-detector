@@ -27,15 +27,25 @@ a device. These resource settings are for this example.
 ```python
 from array import array
 from far_audio_salience import (
-    AcousticConfig, AudioSalienceDetector, DetectorConfig,
-    ResourceLimits, ResourceReporting, SourceSpec,
+    AcousticConfig,
+    AudioSalienceDetector,
+    DetectorConfig,
+    ResourceLimits,
+    ResourceReporting,
+    SourceSpec,
 )
 
 config = DetectorConfig(
     limits=ResourceLimits(
-        max_sources=1, max_channels=1, max_chunk_bytes=4096,
-        max_buffer_bytes=65536, max_baselines=128, max_receipts=32,
-        max_snapshot_bytes=1048576, max_relationship_windows=4, max_features=8,
+        max_sources=1,
+        max_channels=1,
+        max_chunk_bytes=4096,
+        max_buffer_bytes=65536,
+        max_baselines=128,
+        max_receipts=32,
+        max_snapshot_bytes=1048576,
+        max_relationship_windows=4,
+        max_features=8,
     ),
     max_reorder_delay_ns=0,
     comparison_retention_ns=0,
@@ -57,9 +67,13 @@ events = [e for batch in batches for e in batch.ordered]
 assert [e.header.emission_sequence for e in events] == list(range(1, len(events) + 1))
 windows = [w for batch in batches for result in batch.salience for w in result.windows]
 assert [(w.interval.start_frame, w.interval.stop_frame) for w in windows] == [
-    (0, 960), (240, 1200), (480, 1440),
+    (0, 960),
+    (240, 1200),
+    (480, 1440),
 ]
-print(f"Accepted 1440 frames, {len(windows)} DSP windows, {len(events)} ordered emissions")
+print(
+    f"Accepted 1440 frames, {len(windows)} DSP windows, {len(events)} ordered emissions"
+)
 ```
 
 ## Integration contract
