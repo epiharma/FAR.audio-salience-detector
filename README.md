@@ -13,6 +13,8 @@ acoustic fields remain unavailable until `DetectorConfig(acoustic=AcousticConfig
 NumPy is optional; no capture or AGI SDK is required by the package.
 See [the experimental model guide](docs/acoustic-model.md) for contracts,
 configuration, persistence, measured pilot results and limitations.
+See the [controlled integration handoff](docs/controlled-integration.md) for
+the owner-approved trial scope, verified public API example, and release status.
 
 ## Scope and design
 
@@ -68,7 +70,7 @@ source .venv/bin/activate
 Install the package in editable mode with separate development tools:
 
 ```sh
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,dsp]"
 ```
 
 The base package has no runtime dependencies; acoustic tests require `[dsp]`.

@@ -1,5 +1,9 @@
 # Experimental DESIGN-003 model
 
+For the current validation status and owner-approved trial scope, see the
+[controlled integration handoff](controlled-integration.md). The dated
+remediation sections below record their historical milestone results.
+
 Enable explicitly with `pip install -e ".[dev,dsp]"`, then add
 `acoustic=AcousticConfig()` to the existing `DetectorConfig`. The default remains
 infrastructure-only. Enabling without NumPy raises a configuration error with
